@@ -1,9 +1,5 @@
 var Engine = require("uci");
 const config = require("../config");
-const { Axios } = require("axios");
-const axios = new Axios();
-const { downloadFile } = require("./util");
-const path = require("path");
 
 class Stockfish {
   constructor() {
