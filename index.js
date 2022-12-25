@@ -59,12 +59,11 @@ bot.on("text", async (ctx) => {
   if (oldPosition === newPosition) return ctx.reply("Invalid move notation");
 
   //Check if user ended the game
-  console.log(chess.pgn());
   const status = getGameStatus(chess.pgn());
   if (status.isEnded) {
     await endGame(ctx.from.id, chess.pgn());
     const link = await stockfishService.generateImageLink(chess.fen());
-    ctx.replyWithPhoto(link, {
+    return ctx.replyWithPhoto(link, {
       caption: status.lastMove + "\n" + status.message,
     });
   }
@@ -94,7 +93,7 @@ bot.on("text", async (ctx) => {
 });
 
 bot.catch((err, ctx) => {
-  console.log(err.message);
+  console.log(err);
   ctx.reply("Error occured. Please, contact to the developer: @cpphacker");
 });
 

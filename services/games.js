@@ -3,7 +3,8 @@ const { Chess } = require("chess.js");
 const pgnParser = require("pgn-parser");
 
 function getGameStatus(pgn) {
-  const chess = new Chess(pgn);
+  const chess = new Chess();
+  chess.loadPgn(pgn);
   // 1 - stalemate, 2 - threefold repetition, 3 - insufficient material, 4 - 50 move rule
   const status = {
     isEnded: false,
@@ -38,12 +39,16 @@ function getGameStatus(pgn) {
     }
     status.message += "\nYou can start new game with /start";
   }
-  const moves = pgnParser.parse(pgn)[0].moves;
+
+  moves = pgnParser.parse(pgn + " *")[0].moves;
   let move_number;
   if (moves[moves.length - 1].move_number)
     move_number = moves[moves.length - 1].move_number;
   else move_number = moves[moves.length - 2].move_number;
-  status.lastMove = String(move_number) + ". " + moves[moves.length - 1].move;
+  status.lastMove = String(move_number) + ". ";
+  if (chess.fen().includes("w"))
+    status.lastMove += "..." + moves[moves.length - 1].move;
+  else status.lastMove += moves[moves.length - 1].move;
   return status;
 }
 
