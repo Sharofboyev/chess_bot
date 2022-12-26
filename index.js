@@ -69,7 +69,7 @@ bot.on("text", async (ctx) => {
   }
 
   //Get next move from engine
-  stockfishService.getBestMove(newPosition, 4).then(async (bestMove) => {
+  stockfishService.getBestMove(newPosition, 3).then(async (bestMove) => {
     try {
       chess.move(bestMove);
       saveGame(ctx.from.id, chess.pgn());

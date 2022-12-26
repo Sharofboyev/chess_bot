@@ -1,6 +1,20 @@
 const { Pool } = require("pg");
 const config = require("../config");
 const pool = new Pool(config.db);
+pool.query(
+  `CREATE TABLE IF NOT EXISTS users 
+  (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, created_time TIMESTAMPTZ DEFAULT NOW())`
+).catch((err) => {
+  console.log("Can't create table of users! Error message: ", err.message);
+})
+
+pool.query(
+  `CREATE TABLE IF NOT EXISTS games 
+  (id SERIAL PRIMARY KEY, pgn VARCHAR NOT NULL, is_active BOOLEAN DEFAULT TRUE, user_id INTEGER NOT NULL, 
+    created_time TIMESTAMPTZ DEFAULT NOW())`
+).catch((err) => {
+  console.log("Can't create table of games! Error message: ", err.message);
+})
 
 async function getGame(userId) {
   try {
