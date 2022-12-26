@@ -24,7 +24,8 @@ bot.start(async (ctx) => {
     ctx.state.pgn = "";
   }
   chess.loadPgn(ctx.state.pgn);
-  const path = await stockfishService.generateImageLink(chess.fen());
+  const status = getGameStatus(chess.pgn());
+  const path = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
   ctx.replyWithPhoto(
     path,
     {
@@ -78,7 +79,7 @@ bot.on("text", async (ctx) => {
   const status = getGameStatus(chess.pgn());
   if (status.isEnded) {
     await endGame(ctx.from.id, chess.pgn());
-    const link = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
+    const link = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "white");
     return ctx.replyWithPhoto(link, {
       caption: status.lastMove + "\n" + status.message,
     });
@@ -99,7 +100,7 @@ bot.on("text", async (ctx) => {
           caption: status.lastMove + "\n" + status.message,
         });
       }
-      const link = stockfishService.generateImageLink(chess.fen());
+      const link = stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
       ctx.replyWithPhoto(link, { caption: status.lastMove + "\nYour turn" });
     } catch (err) {
       console.log(err.message);

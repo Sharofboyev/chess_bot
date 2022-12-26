@@ -3,14 +3,14 @@ const config = require("../config");
 const pool = new Pool(config.db);
 pool.query(
   `CREATE TABLE IF NOT EXISTS users 
-  (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, created_time TIMESTAMPTZ DEFAULT NOW())`
+  (id BIGINT PRIMARY KEY, name VARCHAR NOT NULL, created_time TIMESTAMPTZ DEFAULT NOW())`
 ).catch((err) => {
   console.log("Can't create table of users! Error message: ", err.message);
 })
 
 pool.query(
   `CREATE TABLE IF NOT EXISTS games 
-  (id SERIAL PRIMARY KEY, pgn VARCHAR NOT NULL, is_active BOOLEAN DEFAULT TRUE, user_id INTEGER NOT NULL, 
+  (id SERIAL PRIMARY KEY, pgn VARCHAR NOT NULL DEFAULT '', is_active BOOLEAN DEFAULT TRUE, user_id BIGINT NOT NULL, 
     created_time TIMESTAMPTZ DEFAULT NOW())`
 ).catch((err) => {
   console.log("Can't create table of games! Error message: ", err.message);
@@ -38,7 +38,7 @@ async function newGame(userId) {
     await pool.query("INSERT INTO games (user_id) VALUES($1)", [userId]);
   } catch (err) {
     console.log(
-      "Error occured in models/getGame. Error message: ",
+      "Error occured in models/newGame. Error message: ",
       err.message
     );
   }
