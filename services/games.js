@@ -12,6 +12,7 @@ function getGameStatus(pgn) {
     checkMate: false,
     statusCode: 0,
     message: "",
+    turn: "white"
   };
 
   if (chess.isGameOver()) {
@@ -46,9 +47,13 @@ function getGameStatus(pgn) {
     move_number = moves[moves.length - 1].move_number;
   else move_number = moves[moves.length - 2].move_number;
   status.lastMove = String(move_number) + ". ";
-  if (chess.fen().includes("w"))
+  if (chess.fen().includes("w")){
     status.lastMove += "..." + moves[moves.length - 1].move;
-  else status.lastMove += moves[moves.length - 1].move;
+  }
+  else {
+    status.lastMove += moves[moves.length - 1].move;
+    status.turn = "black"
+  }
   return status;
 }
 

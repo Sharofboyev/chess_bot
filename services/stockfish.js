@@ -36,9 +36,15 @@ class Stockfish {
     }
   }
 
-  async generateImageLink(position) {
-    const fen = position.split(" ")[0];
-    return config.fen2img + fen;
+  generateImageLink(position, turn, fromBlack) {
+    let link = position.split(" ")[0];
+    link = config.fen2img + link + "?turn=";
+    if (turn === "black")
+      link += "black"
+    else link += "white";
+    if (fromBlack)
+      link += "&pov=black"
+    return link
   }
 }
 

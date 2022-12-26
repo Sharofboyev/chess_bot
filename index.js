@@ -13,37 +13,53 @@ const {
   getGameStatus,
 } = require("./services/games");
 
+bot.use(async (ctx, next) => {
+  ctx.state.pgn = await getPGN(ctx.from.id)
+  return next()
+})
+
 bot.start(async (ctx) => {
-  let pgn = await getPGN(ctx.from.id);
-  if (pgn === null) {
+  if (ctx.state.pgn === null) {
     await newGame(ctx.from.id);
-    pgn = "";
+    ctx.state.pgn = "";
   }
-  chess.loadPgn(pgn);
+  chess.loadPgn(ctx.state.pgn);
   const path = await stockfishService.generateImageLink(chess.fen());
   ctx.replyWithPhoto(
     path,
     {
       caption:
-        "Your move. Move can be one of two formats: Nf3 (piece and destination point) or c1f3 (source and destination point)",
-    },
-    { reply_markup: { keyboard: [[{ text: "Flip board" }]] } }
+        "Your move. Move can be one of two formats: Nf3 (piece abbreviation and destination point) or c1f3 (source and destination point)",
+        reply_markup: {keyboard: [[{text: "Flip board"}]], resize_keyboard: true,}
+    }
   );
 });
 
 bot.hears("Flip board", (ctx) => {
-  ctx.reply("This feature is not ready yet");
+  if (ctx.state.pgn !== ""){
+    return ctx.reply("Flipping board is possible only on the start of the game", {reply_markup: {remove_keyboard: true}});
+  }
+
+  chess.loadPgn("")
+  //Get next move from engine
+  stockfishService.getBestMove(chess.fen(), 3).then(async (bestMove) => {
+    chess.move(bestMove);
+    saveGame(ctx.from.id, chess.pgn());
+
+    const status = getGameStatus(chess.pgn());
+    const link = stockfishService.generateImageLink(chess.fen(), "black", true);
+    ctx.replyWithPhoto(link, { caption: status.lastMove + "\nYour turn" }, {reply_markup: {remove_keyboard: true}});
+  });
 });
 
-bot.hears("endGame", async (ctx) => {
+bot.command("stop", async (ctx) => {
   await endGame(ctx.from.id);
   ctx.reply("Game successfully ended");
 });
 
 bot.on("text", async (ctx) => {
-  const pgn = await getPGN(ctx.from.id);
-  if (pgn === null) return ctx.reply("You should start new game by /start");
-  chess.loadPgn(pgn);
+  if (ctx.state.pgn === null) return ctx.reply("You should start new game by /start");
+  chess.loadPgn(ctx.state.pgn);
 
   //Validation of move
   const oldPosition = chess.fen();
@@ -56,13 +72,13 @@ bot.on("text", async (ctx) => {
       newPosition = chess.fen();
     }
   }
-  if (oldPosition === newPosition) return ctx.reply("Invalid move notation");
+  if (oldPosition === newPosition) return ctx.reply("Please, provide valid move");
 
   //Check if user ended the game
   const status = getGameStatus(chess.pgn());
   if (status.isEnded) {
     await endGame(ctx.from.id, chess.pgn());
-    const link = await stockfishService.generateImageLink(chess.fen());
+    const link = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
     return ctx.replyWithPhoto(link, {
       caption: status.lastMove + "\n" + status.message,
     });
@@ -78,12 +94,12 @@ bot.on("text", async (ctx) => {
       const status = getGameStatus(chess.pgn());
       if (status.isEnded) {
         await endGame(ctx.from.id, chess.pgn());
-        const link = await stockfishService.generateImageLink(chess.fen());
+        const link = stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
         ctx.replyWithPhoto(link, {
           caption: status.lastMove + "\n" + status.message,
         });
       }
-      const link = await stockfishService.generateImageLink(chess.fen());
+      const link = stockfishService.generateImageLink(chess.fen());
       ctx.replyWithPhoto(link, { caption: status.lastMove + "\nYour turn" });
     } catch (err) {
       console.log(err.message);
