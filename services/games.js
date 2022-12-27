@@ -1,6 +1,5 @@
 const { getPGN, newGame, saveGame, endGame } = require("../models/index");
 const { Chess } = require("chess.js");
-const pgnParser = require("pgn-parser");
 
 function getGameStatus(pgn) {
   const chess = new Chess();
@@ -12,7 +11,7 @@ function getGameStatus(pgn) {
     checkMate: false,
     statusCode: 0,
     message: "",
-    turn: "white"
+    turn: "white",
   };
 
   if (chess.isGameOver()) {
@@ -41,19 +40,22 @@ function getGameStatus(pgn) {
     status.message += "\nYou can start new game with /start";
   }
 
-  moves = pgnParser.parse(pgn + " *")[0].moves;
-  let move_number;
-  if (moves[moves.length - 1].move_number)
-    move_number = moves[moves.length - 1].move_number;
-  else move_number = moves[moves.length - 2].move_number;
-  status.lastMove = String(move_number) + ". ";
-  if (chess.fen().includes("w")){
-    status.lastMove += "..." + moves[moves.length - 1].move;
+  const history = chess.history({ verbose: true });
+  if (history.length > 0) {
+    let move_number;
+    if (history[0].color === "w") {
+      move_number = Math.floor((history.length + 1) / 2);
+    } else move_number = Math.floor((history.length + 2) / 2);
+
+    status.lastMove = String(move_number) + ". ";
+    if (chess.fen().includes("w")) {
+      status.lastMove += "..." + history[history.length - 1].san;
+    } else {
+      status.lastMove += history[history.length - 1].san;
+      status.turn = "black";
+    }
   }
-  else {
-    status.lastMove += moves[moves.length - 1].move;
-    status.turn = "black"
-  }
+
   return status;
 }
 

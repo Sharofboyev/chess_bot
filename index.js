@@ -14,9 +14,9 @@ const {
 } = require("./services/games");
 
 bot.use(async (ctx, next) => {
-  ctx.state.pgn = await getPGN(ctx.from.id)
-  return next()
-})
+  ctx.state.pgn = await getPGN(ctx.from.id);
+  return next();
+});
 
 bot.start(async (ctx) => {
   if (ctx.state.pgn === null) {
@@ -25,23 +25,30 @@ bot.start(async (ctx) => {
   }
   chess.loadPgn(ctx.state.pgn);
   const status = getGameStatus(chess.pgn());
-  const path = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
-  ctx.replyWithPhoto(
-    path,
-    {
-      caption:
-        "Your move. Move can be one of two formats: Nf3 (piece abbreviation and destination point) or c1f3 (source and destination point)",
-        reply_markup: {keyboard: [[{text: "Flip board"}]], resize_keyboard: true,}
-    }
+  const path = await stockfishService.generateImageLink(
+    chess.fen(),
+    status.turn,
+    status.turn === "black"
   );
+  ctx.replyWithPhoto(path, {
+    caption:
+      "Your move. Move can be one of two formats: Nf3 (piece abbreviation and destination point) or c1f3 (source and destination point)",
+    reply_markup: {
+      keyboard: [[{ text: "Flip board" }]],
+      resize_keyboard: true,
+    },
+  });
 });
 
 bot.hears("Flip board", (ctx) => {
-  if (ctx.state.pgn !== ""){
-    return ctx.reply("Flipping board is possible only on the start of the game", {reply_markup: {remove_keyboard: true}});
+  if (ctx.state.pgn !== "") {
+    return ctx.reply(
+      "Flipping board is possible only on the start of the game",
+      { reply_markup: { remove_keyboard: true } }
+    );
   }
 
-  chess.loadPgn("")
+  chess.loadPgn("");
   //Get next move from engine
   stockfishService.getBestMove(chess.fen(), 3).then(async (bestMove) => {
     chess.move(bestMove);
@@ -49,7 +56,11 @@ bot.hears("Flip board", (ctx) => {
 
     const status = getGameStatus(chess.pgn());
     const link = stockfishService.generateImageLink(chess.fen(), "black", true);
-    ctx.replyWithPhoto(link, { caption: status.lastMove + "\nYour turn" }, {reply_markup: {remove_keyboard: true}});
+    ctx.replyWithPhoto(
+      link,
+      { caption: status.lastMove + "\nYour turn" },
+      { reply_markup: { remove_keyboard: true } }
+    );
   });
 });
 
@@ -59,34 +70,32 @@ bot.command("stop", async (ctx) => {
 });
 
 bot.on("text", async (ctx) => {
-  if (ctx.state.pgn === null) return ctx.reply("You should start new game by /start");
+  if (ctx.state.pgn === null)
+    return ctx.reply("You should start new game by /start");
   chess.loadPgn(ctx.state.pgn);
 
   //Validation of move
-  const oldPosition = chess.fen();
   const move = ctx.message.text;
-  chess.move(move);
-  let newPosition = chess.fen();
-  if (oldPosition === newPosition) {
-    if (move.length === 4) {
-      chess.move({ from: move.substring(0, 2), to: move.substring(2) });
-      newPosition = chess.fen();
-    }
+  if (chess.move(move, { sloppy: true }) === null) {
+    return ctx.reply("Please, provide valid move");
   }
-  if (oldPosition === newPosition) return ctx.reply("Please, provide valid move");
 
   //Check if user ended the game
   const status = getGameStatus(chess.pgn());
   if (status.isEnded) {
     await endGame(ctx.from.id, chess.pgn());
-    const link = await stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "white");
+    const link = await stockfishService.generateImageLink(
+      chess.fen(),
+      status.turn,
+      status.turn === "white"
+    );
     return ctx.replyWithPhoto(link, {
       caption: status.lastMove + "\n" + status.message,
     });
   }
 
   //Get next move from engine
-  stockfishService.getBestMove(newPosition, 3).then(async (bestMove) => {
+  stockfishService.getBestMove(chess.fen(), 6).then(async (bestMove) => {
     try {
       chess.move(bestMove);
       saveGame(ctx.from.id, chess.pgn());
@@ -95,12 +104,20 @@ bot.on("text", async (ctx) => {
       const status = getGameStatus(chess.pgn());
       if (status.isEnded) {
         await endGame(ctx.from.id, chess.pgn());
-        const link = stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
-        ctx.replyWithPhoto(link, {
+        const link = stockfishService.generateImageLink(
+          chess.fen(),
+          status.turn,
+          status.turn === "black"
+        );
+        return ctx.replyWithPhoto(link, {
           caption: status.lastMove + "\n" + status.message,
         });
       }
-      const link = stockfishService.generateImageLink(chess.fen(), status.turn, status.turn === "black");
+      const link = stockfishService.generateImageLink(
+        chess.fen(),
+        status.turn,
+        status.turn === "black"
+      );
       ctx.replyWithPhoto(link, { caption: status.lastMove + "\nYour turn" });
     } catch (err) {
       console.log(err.message);
